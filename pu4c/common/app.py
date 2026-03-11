@@ -10,7 +10,7 @@ def start_rpc_server():
         def __init__(self):
             super().__init__()
             self.func_map = {
-                'printds': printds,
+                'print': print,
             }
             self.func_map.update(cv_rpc_func_dict)
             for name, func in self.func_map.items():
@@ -154,7 +154,7 @@ def deep_equal(
         rich.print(f"reason: {reason}")
     return is_equal
 @rpc_func
-def printds(
+def print(
     data, 
     reduce: bool = True, max_len: int = 10, 
     decimals: int = 2, 

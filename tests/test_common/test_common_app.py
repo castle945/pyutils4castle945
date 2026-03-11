@@ -15,13 +15,13 @@ class Dog:
         self.name = name
         self.num_legs = num_legs
         
-def test_printds():
+def test_print():
     datadb = pu4c.common.utils.TestDataDB(dbname='pu4c_unittest_data', root='tests/data/')
     infos = datadb.get('mmdet3d/nuscenes_infos')
     infos['data_list'][0]['complex_cls'] = Dog(name='wangcai')
     infos['data_list'][1]['complex_cls'] = Dog(name='laifu')
-    pu4c.common.printds(infos, complex_type=True)
+    pu4c.common.print(infos, complex_type=True)
 
 if __name__ == '__main__':
     test_deep_equal()
-    test_printds()
+    test_print()

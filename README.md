@@ -1,7 +1,6 @@
-# city945 的 Python 工具包
+# castle945 的 Python 工具包
 
-[![PyPI - Version](https://img.shields.io/pypi/v/pu4c)](https://pypi.org/project/pu4c/) ![PyPI - Downloads](https://img.shields.io/pypi/dm/pu4c) [![Coverage Status](https://coveralls.io/repos/github/castle945/pyutils4city945/badge.svg?branch=master)](https://coveralls.io/github/castle945/pyutils4city945?branch=master)
-
+[![PyPI - Version](https://img.shields.io/pypi/v/pu4c)](https://pypi.org/project/pu4c/) ![PyPI - Downloads](https://img.shields.io/pypi/dm/pu4c) [![Coverage Status](https://coveralls.io/repos/github/castle945/pyutils4castle945/badge.svg)](https://coveralls.io/github/castle945/pyutils4castle945)
 ### 介绍
 
 #### 设计思路
@@ -30,6 +29,7 @@ pip install pu4c
 pip install -e .
 
 # 执行单元测试
+rm -rf build dist .pytest_cache .coverage work_dirs/*
 pip install pytest coverage
 pytest tests/
 # 本地运行并查看单元测试覆盖率
@@ -37,7 +37,7 @@ coverage run --source=pu4c -m pytest tests/
 coverage report
 # 手动上传到 coveralls(因为 CI/CD 则需要测试数据文件，比较大)
 pip install coveralls
-export COVERALLS_REPO_TOKEN=XXX # 登录/AddRepo/StartUploadingCoverage/...
+export COVERALLS_REPO_TOKEN=VlGWex8jTfyyny2UwG0oerejdxpTFTVoT # 登录/AddRepo/StartUploadingCoverage/...
 coveralls
 
 # 打包上传 pypi
@@ -50,8 +50,8 @@ pip install pu4c -i https://pypi.org/simple
 ### 快速演示
 
 | ![demo_det3d.png](docs/demo_det3d.png) | ![demo_seg3d.png](docs/demo_seg3d.png) | ![demo_occ3d.png](docs/demo_occ3d.png) |
-| :------------------------------------------------: | :----------------------------------: | :------------------------------------------------: |
-|                 三维目标检测可视化                 |          三维语义分割可视化          |                 三维占据预测可视化                 |
+| :----------------------------------: | :----------------------------------: | :----------------------------------: |
+|          三维目标检测可视化          |          三维语义分割可视化          |          三维占据预测可视化          |
 
 ### 快速入门
 
