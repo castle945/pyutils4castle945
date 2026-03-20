@@ -1,3 +1,4 @@
+from typing import Any, Union, Optional, Dict, List, Tuple
 import rpyc
 import pickle, json, os
 import pu4c.config as cfg
@@ -16,7 +17,8 @@ def rpc_func(func):
             else:
                 raise AttributeError(f"Remote object has no attribute '{func.__name__}'")
         else:
-            return func(*args, **kwargs) # python 中会为无返回值的函数返回 None
+            # python 中会为无返回值的函数返回 None
+            return func(*args, **kwargs) 
     return wrapper
 
 def read_pickle(filepath: str = cfg.cache_pkl):
@@ -36,12 +38,11 @@ def write_json(data, filepath: str, indent: int = 4):
 
 class TestDataDB:
     """简单的 Python 键值数据库，可用于存储测试数据
-    
-    (1) 数据库名为目录名，目录下包括一个 json 文件和多个 pkl 文件，json 文件存储数据的键值-路径对，pickle 文件存储键值-数据对  
-    (2) 手动删除条目: 编辑 json 文件删除再运行 gc 方法进行垃圾回收  
-    (3) 压缩传输: 建议手动压缩目录为 .tgz 文件以进行文件传输  
+    - 数据库名为目录名，目录下包括一个 json 文件和多个 pkl 文件，json 文件存储数据的键值-路径对，pickle 文件存储键值-数据对
+    - 手动删除条目: 编辑 json 文件删除再运行 gc 方法进行垃圾回收或者设置 gc 标志为 True 下次初始化时自动进行垃圾回收
+    - 压缩传输: 建议手动压缩目录为 .tgz 文件以进行文件传输
     """
-    def __init__(self, dbname: str = 'pu4c_test_data', root: str = cfg.cache_dir):
+    def __init__(self, dbname: str, root: str):
         dbroot = os.path.join(root, dbname)
         main_path = os.path.join(dbroot, 'index.pkl')   # 主数据文件
         keys_path = os.path.join(dbroot, 'keys.json')   # 键值对文件
@@ -49,16 +50,20 @@ class TestDataDB:
             print('create new database.')
             os.mkdir(dbroot)
             write_pickle({}, main_path)
-            write_json({}, keys_path)
+            write_json({'gc': False}, keys_path)
 
         self.dbroot = dbroot
         self.main_path = main_path
         self.keys_path = keys_path
         self.keys_dict = read_json(keys_path)
         self.filesize = 1 * 1024**3
-    def get(self, key, default=None):
-        return read_pickle(os.path.join(self.dbroot, self.keys_dict[key]))[key] if key in self.keys_dict else default # 如果某个测试需要一批多个数据，则将其打包作为数据库的一项
-    def set(self, key, data):
+        if 'gc' in self.keys_dict and self.keys_dict['gc'] == True:
+            self.gc()
+            self.keys_dict.pop('gc')
+            write_json(self.keys_dict, self.keys_path)
+    def get(self, key: str, default: Any = None) -> Any:
+        return read_pickle(os.path.join(self.dbroot, self.keys_dict[key]))[key] if key in self.keys_dict else default
+    def set(self, key: str, data: Any):
         if key in self.keys_dict:
             # 键值存在则更新数据
             filepath = os.path.join(self.dbroot, self.keys_dict[key])
@@ -86,7 +91,7 @@ class TestDataDB:
                 write_json(self.keys_dict, self.keys_path)
                 write_pickle({}, self.main_path)
 
-    def remove(self, key):
+    def remove(self, key: str):
         assert key in self.keys_dict
         filepath = os.path.join(self.dbroot, self.keys_dict[key])
         # remove key
@@ -97,7 +102,7 @@ class TestDataDB:
         filedata.pop(key)
         write_pickle(filedata, filepath)
         print(f"remove {key}, data at {filepath}")
-    def rename(self, key, new_key):
+    def rename(self, key: str, new_key: str):
         assert key in self.keys_dict
         filepath = os.path.join(self.dbroot, self.keys_dict[key])
         # rename key
@@ -110,7 +115,7 @@ class TestDataDB:
         filedata.pop(key)
         write_pickle(filedata, filepath)
         print(f"rename {key} to {new_key}, data at {filepath}")
-    def gc(self):
+    def gc(self) -> List[str]:
         import glob
         files = glob.glob(f'{self.dbroot}/*.pkl')
         deleted_files = []
@@ -124,11 +129,11 @@ class TestDataDB:
                 os.remove(filepath)
                 deleted_files.append(filepath)
                 print(f"remove file {filepath} successed")
-        write_json(self.keys_dict, self.keys_path) # 写键，键和数据必须同时操作
+        # 写键，键和数据必须同时操作
+        write_json(self.keys_dict, self.keys_path)
         return deleted_files
-    def cat(self, dbname, root, keys: list = None):
-        """拼接另外的数据库到当前数据库"""
-        datadb = TestDataDB(dbname=dbname, root=root)
+    def copyfrom(self, datadb: 'TestDataDB', keys: list = None):
+        """从其他数据库拷贝数据到当前数据库"""
         if keys is None:
             cat_keys_dict = datadb.keys_dict
         else:
@@ -179,5 +184,5 @@ def remove_typeinfo(data):
         return [remove_typeinfo(i) for i in data]
     elif isinstance(data, tuple):
         if len(data) == 2 and isinstance(data[0], dict) and 'typeinfo' in data[0]:
-            return data[1]
+            return remove_typeinfo(data[1])
     return data

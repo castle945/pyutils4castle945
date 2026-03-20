@@ -5,7 +5,7 @@ with open("README.md", "r") as fh:
 
 setup(
     name="pu4c",
-    version="1.3.3",
+    version="1.4.0",
     packages=find_packages(exclude=["tests"]),
     author="castle945",
     author_email="castle945@njust.edu.cn",
@@ -21,5 +21,6 @@ setup(
     install_requires=[
         'rpyc',
         'rich',
+        'numpy',
     ],
 )

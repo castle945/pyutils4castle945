@@ -1,7 +1,6 @@
 import numpy as np
 # rgb 排列组合 27 种去除黑白，并把七色环颜色前移
-# color_det = [[r*0.5, g*0.5, b*0.5] for r in range(2, -1, -1) for g in range(2, -1, -1) for b in range(2, -1, -1)]
-color_det_class25 = [
+det25cls_colormap = [
     [0.0, 1.0, 0.0], # 绿
     [1.0, 0.0, 0.0], # 红
     [1.0, 0.5, 0.0], # 橙
@@ -29,21 +28,21 @@ color_det_class25 = [
     [0.0, 0.0, 0.5],
 ]
 
-def plot_color_list(color_rgb_list, strip_height: int = 10, width: int = 100):
+def plot_colormap(colormap, save_path: str, strip_height: int = 10, width: int = 100):
     from matplotlib import pyplot as plt
-    height = len(color_rgb_list) * strip_height
+    height = len(colormap) * strip_height
     img_grey = np.zeros((height, width, 1), dtype=np.uint8)
     color_idx = 0
     for start in range(0, height, strip_height):
         img_grey[start:start+strip_height] = color_idx
         color_idx += 1
-    img_rgb = np.array(color_rgb_list)[img_grey.reshape(-1)].reshape(height, width, 3)
+    img_rgb = np.array(colormap)[img_grey.reshape(-1)].reshape(height, width, 3)
 
-    plt.imshow(img_rgb)
+    plt.imsave(save_path, img_rgb)
 
-# rviz 点云反射率颜色映射 modified from getRainbowColor() in https://github.com/ros-visualization/rviz/blob/noetic-devel/src/rviz/default_plugin/point_cloud_transformers.cpp
+# modified from getRainbowColor() in https://github.com/ros-visualization/rviz/blob/noetic-devel/src/rviz/default_plugin/point_cloud_transformers.cpp
 def rviz_intensity_colormap(intensity: np.ndarray, in_norm: bool = None, out_norm: bool = False):
-    """将反射率映射为 rgb 数组
+    """rviz 风格的点云反射率颜色映射，将反射率映射为 rgb 数组
     Args:
         intensity (ndarray(N,)): 反射率
         in_norm: None 则推断，True/False 则表示输入数据已经/没有归一化

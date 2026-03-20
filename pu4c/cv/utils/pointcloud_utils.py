@@ -4,14 +4,16 @@ import numpy as np
 # 投影
 def project_points_to_pixels(points: np.ndarray, image_shape: tuple, transform_mat: np.ndarray):
     """
-    坐标变换公式: 
-        (1) 变换矩阵形式: y(4,N) = R(4,4)*x(4,N) 变换矩阵同理定义为右乘列向量的点坐标的增广，不一定是正交阵，往往对公式转置一下以适应点云输入，即 y.T(N,4) = x.T(N,4)*R.T(4,4)
-        (2) 旋转矩阵加平移向量形式: y(3,N) = R(3,3)*x(3,N) + t(3,1) 平移向量为列向量，旋转矩阵也定义为右乘列向量的点坐标，旋转矩阵为正交阵具有转置等于逆和行列式为 1 的特性
     Args:
         transform_mat (ndarray(4, 4)): 激光雷达坐标系到像素坐标系的变换矩阵，它等于 相机内参矩阵 @ 激光雷达到相机坐标系的变换矩阵
+    Notes:
+        - 坐标变换公式:
+            (1) 变换矩阵形式: y(4,N) = R(4,4)*x(4,N) 变换矩阵同理定义为右乘列向量的点坐标的增广，不一定是正交阵，往往对公式转置一下以适应点云输入，即 y.T(N,4) = x.T(N,4)*R.T(4,4)
+            (2) 旋转矩阵加平移向量形式: y(3,N) = R(3,3)*x(3,N) + t(3,1) 平移向量为列向量，旋转矩阵也定义为右乘列向量的点坐标，旋转矩阵为正交阵具有转置等于逆和行列式为 1 的特性
+        - 老版本 numpy 数组转置后内存不连续，从而导致计算错误，故需要再转成内存连续后再计算
     """
     points_hom = np.hstack((points[:, :3], np.ones((points.shape[0], 1), dtype=np.float32))) # [N, 4]
-    points_pixel = points_hom @ np.ascontiguousarray(transform_mat.T)[:, :3] # 老版本 numpy 数组转置后内存不连续，从而导致计算错误，故需要再转成内存连续后再计算
+    points_pixel = points_hom @ np.ascontiguousarray(transform_mat.T)[:, :3]
     
     pixels_depth = points_pixel[:, 2]
     pixels = (points_pixel[:, :2].T / points_pixel[:, 2]).T # (N, 2)[col, row]
@@ -90,10 +92,14 @@ def range_projection(points: np.ndarray, height: int, width: int, fov: tuple):
 
     return range_image, point_idx
 def lidar_to_rangeview(
-    points: np.ndarray, height: int, width: int, 
+    points: np.ndarray,
+    height: int,
+    width: int,
     fov: List[float] = None,
-    resolution: List[float] = None, fov_offset_down: float = None,
-    max_depth: float = None, return_intensity: bool = False,
+    resolution: List[float] = None,
+    fov_offset_down: float = None,
+    max_depth: float = None,
+    return_intensity: bool = False,
 ):
     """一般算法都是以线性拉伸的方式转 RV 图像，其实这就是一种柱坐标系体素栅格
     Args:
@@ -157,10 +163,11 @@ def lidar_to_rangeview(
 
     return range_image, point_idx
 def rangeview_to_lidar(
-    range_image: np.ndarray, 
-    intensity_image: np.ndarray = None, 
+    range_image: np.ndarray,
+    intensity_image: np.ndarray = None,
     fov: List[float] = None,
-    resolution: List[float] = None, fov_offset_down: float = None,
+    resolution: List[float] = None,
+    fov_offset_down: float = None,
 ):
     height, width = range_image.shape
     proj_x, proj_y = np.meshgrid(np.arange(width, dtype=np.float32), np.arange(height, dtype=np.float32), indexing="xy")

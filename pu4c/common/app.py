@@ -22,10 +22,6 @@ def start_rpc_server():
                 return pickle.dumps(func(*args, **kwargs))
             exposed_method.__name__ = f'exposed_{name}'
             return exposed_method
-        # 如果不动态创建则需要手动逐个创建内容完全一样只有函数名不同的方法
-        # def exposed_cloud_viewer(self, serialized_args, serialized_kwargs):
-        #     args, kwargs = pickle.loads(serialized_args), pickle.loads(serialized_kwargs)
-        #     return pickle.dumps(cloud_viewer(*args, **kwargs))
 
     server = ThreadedServer(RPCService, port=cfg.rpc_server_port, auto_register=True)
     server.start()
@@ -48,7 +44,8 @@ def create_logger(log_file: str = None):
     return logger
 
 def deep_equal(
-    var1, var2,
+    data1,
+    data2,
     tol: Tuple[float, float] = None,
     ignore_keys: List[str] = [],
     ignore_indices: List[Union[int, List]] = [],
@@ -65,35 +62,35 @@ def deep_equal(
     import rich
     import math
 
-    def deep_equal_with_reason(var1, var2, reason, ignore_indices):
+    def deep_equal_with_reason(data1, data2, reason, ignore_indices):
         # 比较数据类型
-        if type(var1) != type(var2):
+        if type(data1) != type(data2):
             return False, f"{reason}: 类型不一致\n" \
-                          f"type1: {type(var1)}\n" \
-                          f"type2: {type(var2)}\n"
+                          f"type1: {type(data1)}\n" \
+                          f"type2: {type(data2)}\n"
         
         # 如果是字典，则比较键值对
-        if isinstance(var1, dict):
+        if isinstance(data1, dict):
             if len(ignore_keys) > 0:
-                var1 = {k: v for k, v in var1.items() if k not in ignore_keys}
-                var2 = {k: v for k, v in var2.items() if k not in ignore_keys}
-            elif var1.keys() != var2.keys():
+                data1 = {k: v for k, v in data1.items() if k not in ignore_keys}
+                data2 = {k: v for k, v in data2.items() if k not in ignore_keys}
+            elif data1.keys() != data2.keys():
                 return False, f"{reason}: 键不匹配\n" \
-                              f"key1: {var1.keys()}\n" \
-                              f"key2: {var2.keys()}\n"
+                              f"key1: {data1.keys()}\n" \
+                              f"key2: {data2.keys()}\n"
             
-            for k in var1.keys():
-                is_equal, reason = deep_equal_with_reason(var1[k], var2[k], reason, ignore_indices)
+            for k in data1.keys():
+                is_equal, reason = deep_equal_with_reason(data1[k], data2[k], reason, ignore_indices)
                 if not is_equal:
                     return False, f"['{k}']{reason}"
             return True, reason
         
         # 如果是列表或元组，则逐元素比较
-        if isinstance(var1, (list, tuple)):
-            if len(var1) != len(var2):
+        if isinstance(data1, (list, tuple)):
+            if len(data1) != len(data2):
                 return False, f"{reason}: 列表长度不相等\n" \
-                              f"len1: {len(var1)}\n" \
-                              f"len2: {len(var2)}\n"
+                              f"len1: {len(data1)}\n" \
+                              f"len2: {len(data2)}\n"
             
             cur_ignore_indices, next_ignore_indices = [], []
             for idx in ignore_indices:
@@ -101,7 +98,7 @@ def deep_equal(
                     next_ignore_indices = idx
                 else:
                     cur_ignore_indices.append(idx)
-            for i, (x, y) in enumerate(zip(var1, var2)):
+            for i, (x, y) in enumerate(zip(data1, data2)):
                 if i in cur_ignore_indices:
                     print(f'skip idx {i}')
                     continue
@@ -111,61 +108,62 @@ def deep_equal(
             return True, reason
         
         # 如果是 NumPy 数组，则根据数组内容选择不同的比较方法
-        if isinstance(var1, np.ndarray):
-            if var1.shape != var2.shape:
+        if isinstance(data1, np.ndarray):
+            if data1.shape != data2.shape:
                 return False, f"{reason}: 数组形状不相等\n" \
-                              f"shape1: {var1.shape}\n" \
-                              f"shape2: {var2.shape}\n"
+                              f"shape1: {data1.shape}\n" \
+                              f"shape2: {data2.shape}\n"
             
-            if var1.dtype.kind in ['i', 'f']:
-                # 数值数组，使用 np.isclose 进行比较 np.isclose: if abs(var1-var2) <= atol + rtol*abs(b)
-                mask = np.isclose(var1, var2, atol=tol[0], rtol=tol[1]) if tol is not None else np.isclose(var1, var2) # rtol 相对误差容忍度
+            if data1.dtype.kind in ['i', 'f']:
+                # 数值数组，使用 np.isclose 进行比较 np.isclose: if abs(data1-data2) <= atol + rtol*abs(b)
+                mask = np.isclose(data1, data2, atol=tol[0], rtol=tol[1]) if tol is not None else np.isclose(data1, data2) # rtol 相对误差容忍度
                 if not np.all(mask):
                     idx = np.argwhere(~mask)[0] # 所有不相等值的索引，这里只打印第一个不相等的索引
                     return False, f"{reason}: 数组值在索引 {tuple(idx)} 处不相等\n" \
-                                  f"data1: {var1[idx]}\n" \
-                                  f"data2: {var2[idx]}\n"
+                                  f"data1: {data1[idx]}\n" \
+                                  f"data2: {data2[idx]}\n"
             else:
                 # 非数值数组（如字符串数组），使用 np.array_equal 进行比较
-                if not np.array_equal(var1, var2):
-                    idx = np.argwhere(var1 != var2)[0]
+                if not np.array_equal(data1, data2):
+                    idx = np.argwhere(data1 != data2)[0]
                     return False, f"{reason}: 数组值在索引 {tuple(idx)} 处不相等\n" \
-                                  f"data1: {var1[idx]}\n" \
-                                  f"data2: {var2[idx]}\n"
+                                  f"data1: {data1[idx]}\n" \
+                                  f"data2: {data2[idx]}\n"
             return True, reason
 
-        if isinstance(var1, float) and tol is not None:
-            return (True, reason) if abs(var1 - var2) <= tol[0] + tol[1] * abs(var2) else (False, f"{reason}: 值不相等\n" \
-                                                                                                  f"data1: {var1}\n" \
-                                                                                                  f"data2: {var2}\n")
+        if isinstance(data1, float) and tol is not None:
+            return (True, reason) if abs(data1 - data2) <= tol[0] + tol[1] * abs(data2) else (False, f"{reason}: 值不相等\n" \
+                                                                                                  f"data1: {data1}\n" \
+                                                                                                  f"data2: {data2}\n")
 
-        if isinstance(var1, (int, float)) and math.isnan(var1) and math.isnan(var2):
+        if isinstance(data1, (int, float)) and math.isnan(data1) and math.isnan(data2):
             return (True, reason)
 
         # 其他类型，直接比较
-        return (True, reason) if var1 == var2 else (False, f"{reason}: 值不相等\n" \
-                                                           f"data1: {var1}\n" \
-                                                           f"data2: {var2}\n")
+        return (True, reason) if data1 == data2 else (False, f"{reason}: 值不相等\n" \
+                                                           f"data1: {data1}\n" \
+                                                           f"data2: {data2}\n")
 
     if complex_type:
-        var1, var2 = convert_type(var1), convert_type(var2)
-    is_equal, reason = deep_equal_with_reason(var1, var2, reason='', ignore_indices=ignore_indices)
+        data1, data2 = convert_type(data1), convert_type(data2)
+    is_equal, reason = deep_equal_with_reason(data1, data2, reason='', ignore_indices=ignore_indices)
     if not is_equal:
         rich.print(f"reason: {reason}")
     return is_equal
-@rpc_func
+
 def print(
-    data, 
-    reduce: bool = True, max_len: int = 10, 
-    decimals: int = 2, 
-    complex_type: bool = False, 
-    rpc: bool = False,
+    data,
+    reduce: bool = True,
+    max_len: int = 10,
+    decimals: int = 2,
+    complex_type: bool = False,
 ) -> None:
-    """打印复杂结构体，支持 dict/list/ndarray 等类型的嵌套，由于 VSCode 调试终端中打印效果变差，增加远程调用支持
+    """打印复杂结构体，支持 dict/list/ndarray 等类型的嵌套
     Args:
         reduce: 是否缩减列表项，即只打印列表中的一项数据
         max_len: 列表或一维数组最大长度，超过此值则缩减
         decimals: 保留的小数点位数
+        complex_type: 是否为复杂数据类型，即包括非 Python 内置类型或 numpy 类型
     """
     from rich import print as rprint
     import numpy as np

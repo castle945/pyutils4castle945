@@ -34,3 +34,8 @@ def transform_matrix(rotation_mat: np.ndarray, translation: np.ndarray, inverse:
         tm[:3, 3] = np.transpose(translation)
 
     return tm
+
+def pad33to44(mat: np.ndarray) -> np.ndarray:
+    tm = np.eye(4, dtype=mat.dtype)
+    tm[:3, :3] = mat
+    return tm

@@ -1,6 +1,7 @@
 # castle945 的 Python 工具包
 
-[![PyPI - Version](https://img.shields.io/pypi/v/pu4c)](https://pypi.org/project/pu4c/) ![PyPI - Downloads](https://img.shields.io/pypi/dm/pu4c) [![Coverage Status](https://coveralls.io/repos/github/castle945/pyutils4castle945/badge.svg)](https://coveralls.io/github/castle945/pyutils4castle945)
+[![PyPI - Version](https://img.shields.io/pypi/v/pu4c)](https://pypi.org/project/pu4c/) ![PyPI - Downloads](https://img.shields.io/pypi/dm/pu4c) [![Coverage Status](https://coveralls.io/repos/github/castle945/pyutils4castle945/badge.svg?branch=main)](https://coveralls.io/github/castle945/pyutils4castle945?branch=main)
+
 ### 介绍
 
 #### 设计思路
@@ -37,7 +38,7 @@ coverage run --source=pu4c -m pytest tests/
 coverage report
 # 手动上传到 coveralls(因为 CI/CD 则需要测试数据文件，比较大)
 pip install coveralls
-export COVERALLS_REPO_TOKEN=VlGWex8jTfyyny2UwG0oerejdxpTFTVoT # 登录/AddRepo/StartUploadingCoverage/...
+export COVERALLS_REPO_TOKEN=XXXXX # 登录/AddRepo/StartUploadingCoverage/...
 coveralls
 
 # 打包上传 pypi

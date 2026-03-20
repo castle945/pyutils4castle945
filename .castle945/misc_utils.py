@@ -3,6 +3,62 @@ import pickle
 from pu4c.det3d.common_utils import limit_period, transform_matrix
 from . import config
 
+def corners_to_boxes3d(corners: np.ndarray) -> np.ndarray:
+    corners = copy.deepcopy(corners)
+    centers = np.mean(corners, axis=1)
+    corners -= centers[:, np.newaxis, :]
+    dims = np.vstack([
+        np.linalg.norm(corners[:, 1] - corners[:, 0], axis=-1),
+        np.linalg.norm(corners[:, 2] - corners[:, 0], axis=-1),
+        np.linalg.norm(corners[:, 3] - corners[:, 0], axis=-1),
+    ]).T
+    yaw = np.arctan2(corners[:, 1, 1] - corners[:, 0, 1], corners[:, 1, 0] - corners[:, 0, 0])
+    return np.hstack([centers, dims, yaw[:, np.newaxis]])
+def get_oriented_bounding_box_corners(xyz: np.ndarray, lwh: np.ndarray, axis_angles: np.ndarray) -> np.ndarray:
+    """等价于 boxes3d_to_corners 
+    轴角转旋转矩阵（暂只考虑偏航）来将其旋转为有向包围盒，计算盒子的 8 个角点，添加连线
+
+    Locals:
+        lines (ndarray(10, 2)): 预定义的 14 条连线
+              4 -------- 6
+             /|         /|
+            5 -------- 3 .
+            | |        | |
+            . 7 -------- 1          
+            |/         |/       z |/ x  
+            2 -------- 0      y - 0
+    Returns:
+        corners (ndarray(N, 8, 3)): 角点
+    """
+    x, y, z = xyz
+    l, w, h = lwh
+    roll, pitch, yaw = axis_angles
+    xdif, ydif, zdif = l/2, w/2, h/2
+    offsets = np.array([
+        [-xdif,  xdif, -xdif, -xdif, xdif, -xdif,  xdif,  xdif],
+        [-ydif, -ydif,  ydif, -ydif, ydif,  ydif, -ydif,  ydif],
+        [-zdif, -zdif, -zdif,  zdif, zdif,  zdif,  zdif, -zdif],
+    ])
+    R_x = np.array([
+        [ 1, 0            ,  0          ],
+        [ 0, np.cos(roll) , -np.sin(roll)],
+        [ 0, np.sin(roll) ,  np.cos(roll)],
+    ])
+    R_y = np.array([
+        [ np.cos(pitch),  0,  np.sin(pitch)],
+        [ 0            ,  1,  0            ],
+        [-np.sin(pitch),  0,  np.cos(pitch)],
+    ])
+    R_z = np.array([
+        [ np.cos(yaw), -np.sin(yaw),  0],
+        [ np.sin(yaw),  np.cos(yaw),  0],
+        [ 0          ,  0          ,  1],
+    ])
+    R = R_x @ R_y @ R_z
+    corners = (R @ offsets + np.array([[x], [y], [z]])).T
+    
+    return corners
+
 
 def create_waymo_vis_infos(pkl, valid_classes=config.waymo_kitti_classes[:3], num_features=6, add_ext_info=True):
     infos = pickle.load(open(pkl, 'rb'))
